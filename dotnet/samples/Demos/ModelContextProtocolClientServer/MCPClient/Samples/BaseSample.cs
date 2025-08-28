@@ -86,19 +86,23 @@ internal abstract class BaseSample
             .AddEnvironmentVariables()
             .Build();
 
-        if (config["OpenAI:ApiKey"] is not { } apiKey)
-        {
-            const string Message = "Please provide a valid OpenAI:ApiKey to run this sample. See the associated README.md for more details.";
-            Console.Error.WriteLine(Message);
-            throw new InvalidOperationException(Message);
-        }
-
-        string modelId = config["OpenAI:ChatModelId"] ?? "gpt-4o-mini";
-
         // Create kernel
         var kernelBuilder = Kernel.CreateBuilder();
-        kernelBuilder.Services.AddOpenAIChatCompletion(modelId: modelId, apiKey: apiKey);
-
+        if (config["AzureOpenAI:DeploymentName"] != null)
+        {
+            kernelBuilder.AddAzureOpenAIChatCompletion(config["AzureOpenAI:DeploymentName"]!, config["AzureOpenAI:Endpoint"]!, config["AzureOpenAI:ApiKey"]!);
+        }
+        else
+        {
+            if (config["OpenAI:ApiKey"] is not { } apiKey)
+            {
+                const string Message = "Please provide a valid OpenAI:ApiKey to run this sample. See the associated README.md for more details.";
+                Console.Error.WriteLine(Message);
+                throw new InvalidOperationException(Message);
+            }
+            string modelId = config["OpenAI:ChatModelId"] ?? "gpt-4o-mini";
+            kernelBuilder.Services.AddOpenAIChatCompletion(modelId: modelId, apiKey: apiKey);
+        }
         return kernelBuilder.Build();
     }
 

@@ -16,7 +16,7 @@ using ModelContextProtocol.Server;
 var builder = Host.CreateEmptyApplicationBuilder(settings: null);
 
 // Load and validate configuration
-(string embeddingModelId, string chatModelId, string apiKey) = GetConfiguration();
+(string chatModelId, string embeddingModelId, string endpoint, string apiKey) = GetConfiguration();
 
 // Register the kernel
 IKernelBuilder kernelBuilder = builder.Services.AddKernel();
@@ -27,11 +27,12 @@ kernelBuilder.Plugins.AddFromType<WeatherUtils>();
 kernelBuilder.Plugins.AddFromType<MailboxUtils>();
 
 // Register SK agent as plugin
-kernelBuilder.Plugins.AddFromFunctions("Agents", [AgentKernelFunctionFactory.CreateFromAgent(CreateSalesAssistantAgent(chatModelId, apiKey))]);
+kernelBuilder.Plugins.AddFromFunctions("Agents", [AgentKernelFunctionFactory.CreateFromAgent(CreateSalesAssistantAgent(chatModelId, endpoint, apiKey))]);
 
 // Register embedding generation service and in-memory vector store
 kernelBuilder.Services.AddSingleton<VectorStore, InMemoryVectorStore>();
-kernelBuilder.Services.AddOpenAIEmbeddingGenerator(embeddingModelId, apiKey);
+// kernelBuilder.Services.AddOpenAIEmbeddingGenerator(embeddingModelId, apiKey);
+kernelBuilder.Services.AddAzureOpenAIEmbeddingGenerator(embeddingModelId, endpoint, apiKey);
 
 // Register MCP server
 builder.Services
@@ -59,7 +60,7 @@ await builder.Build().RunAsync();
 /// <summary>
 /// Gets configuration.
 /// </summary>
-static (string EmbeddingModelId, string ChatModelId, string ApiKey) GetConfiguration()
+static (string chatModelId, string EmbeddingModelId, string ChatModelId, string ApiKey) GetConfiguration()
 {
     // Load and validate configuration
     IConfigurationRoot config = new ConfigurationBuilder()
@@ -67,19 +68,19 @@ static (string EmbeddingModelId, string ChatModelId, string ApiKey) GetConfigura
         .AddEnvironmentVariables()
         .Build();
 
-    if (config["OpenAI:ApiKey"] is not { } apiKey)
+    if (config["AzureOpenAI:ApiKey"] is not { } apiKey)
     {
-        const string Message = "Please provide a valid OpenAI:ApiKey to run this sample. See the associated README.md for more details.";
+        const string Message = "Please provide a valid AzureOpenAI:ApiKey to run this sample. See the associated README.md for more details.";
         Console.Error.WriteLine(Message);
         throw new InvalidOperationException(Message);
     }
+    string chatModelId = config["AzureOpenAI:DeploymentName"] ?? "gpt-4o-mini";
+    string embeddingModelId = config["AzureOpenAI:EmbeddingModelId"] ?? "text-embedding-3-small";
+    string endpoint = config["AzureOpenAI:Endpoint"]!;
 
-    string embeddingModelId = config["OpenAI:EmbeddingModelId"] ?? "text-embedding-3-small";
-
-    string chatModelId = config["OpenAI:ChatModelId"] ?? "gpt-4o-mini";
-
-    return (embeddingModelId, chatModelId, apiKey);
+    return (chatModelId, embeddingModelId, endpoint, apiKey);
 }
+
 static ResourceTemplateDefinition CreateVectorStoreSearchResourceTemplate(Kernel? kernel = null)
 {
     return new ResourceTemplateDefinition
@@ -145,7 +146,7 @@ static ResourceTemplateDefinition CreateVectorStoreSearchResourceTemplate(Kernel
     };
 }
 
-static Agent CreateSalesAssistantAgent(string chatModelId, string apiKey)
+static Agent CreateSalesAssistantAgent(string chatModelId, string endpoint, string apiKey)
 {
     IKernelBuilder kernelBuilder = Kernel.CreateBuilder();
 
@@ -153,7 +154,8 @@ static Agent CreateSalesAssistantAgent(string chatModelId, string apiKey)
     kernelBuilder.Plugins.AddFromType<OrderProcessingUtils>();
 
     // Register chat completion service
-    kernelBuilder.Services.AddOpenAIChatCompletion(chatModelId, apiKey);
+    // kernelBuilder.Services.AddOpenAIChatCompletion(chatModelId, apiKey);
+    kernelBuilder.Services.AddAzureOpenAIChatCompletion(chatModelId, endpoint, apiKey);
 
     // Using a dedicated kernel with the `OrderProcessingUtils` plugin instead of the global kernel has a few advantages:
     // - The agent has access to only relevant plugins, leading to better decision-making regarding which plugin to use.

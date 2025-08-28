@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.AI.Agents.Persistent;
-using Azure.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
@@ -95,9 +94,14 @@ internal sealed class AzureAIAgentWithMCPToolsSample : BaseSample
 
         string modelId = config["AzureAI:ChatModelId"] ?? "gpt-4o-mini";
 
-        // Create the Azure AI Agent
-        PersistentAgentsClient agentsClient = AzureAIAgent.CreateAgentsClient(endpoint, new AzureCliCredential());
+        // 使用 Service Principal 登录
+        var tenantId = config["AzureAI:TenantId"];
+        var clientId = config["AzureAI:ClientId"];
+        var clientSecret = config["AzureAI:ClientSecret"];
+        var credential = new Azure.Identity.ClientSecretCredential(tenantId, clientId, clientSecret);
 
+        // Create the Azure AI Agent
+        PersistentAgentsClient agentsClient = AzureAIAgent.CreateAgentsClient(endpoint, credential);
         PersistentAgent agent = await agentsClient.Administration.CreateAgentAsync(modelId, name, null, instructions);
 
         return new AzureAIAgent(agent, agentsClient)

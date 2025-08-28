@@ -19,9 +19,10 @@ public sealed class Step9_OpenAPI_Plugins(ITestOutputHelper output) : BaseTest(o
     {
         // Create a kernel with OpenAI chat completion
         IKernelBuilder kernelBuilder = Kernel.CreateBuilder();
-        kernelBuilder.AddOpenAIChatClient(
-                modelId: TestConfiguration.OpenAI.ChatModelId,
-                apiKey: TestConfiguration.OpenAI.ApiKey);
+        kernelBuilder.AddAzureOpenAIChatClient(
+                deploymentName: TestConfiguration.AzureOpenAI.DeploymentName,
+                endpoint: TestConfiguration.AzureOpenAI.Endpoint,
+                apiKey: TestConfiguration.AzureOpenAI.ApiKey);
         Kernel kernel = kernelBuilder.Build();
 
         // Load OpenAPI plugin

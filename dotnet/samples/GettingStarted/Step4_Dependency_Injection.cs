@@ -58,9 +58,10 @@ public sealed class Step4_Dependency_Injection(ITestOutputHelper output) : BaseT
         collection.AddSingleton<IUserService>(new FakeUserService());
 
         // Add ChatClient using OpenAI
-        collection.AddOpenAIChatClient(
-            modelId: TestConfiguration.OpenAI.ChatModelId,
-            apiKey: TestConfiguration.OpenAI.ApiKey);
+        collection.AddAzureOpenAIChatClient(
+                deploymentName: TestConfiguration.AzureOpenAI.DeploymentName,
+                endpoint: TestConfiguration.AzureOpenAI.Endpoint,
+                apiKey: TestConfiguration.AzureOpenAI.ApiKey);
 
         var kernelBuilder = collection.AddKernel();
         kernelBuilder.Plugins.AddFromType<TimeInformation>();

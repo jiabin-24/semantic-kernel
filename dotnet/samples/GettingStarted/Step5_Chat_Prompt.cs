@@ -14,9 +14,10 @@ public sealed class Step5_Chat_Prompt(ITestOutputHelper output) : BaseTest(outpu
     {
         // Create a kernel with OpenAI chat completion
         Kernel kernel = Kernel.CreateBuilder()
-            .AddOpenAIChatClient(
-                modelId: TestConfiguration.OpenAI.ChatModelId,
-                apiKey: TestConfiguration.OpenAI.ApiKey)
+            .AddAzureOpenAIChatClient(
+                deploymentName: TestConfiguration.AzureOpenAI.DeploymentName,
+                endpoint: TestConfiguration.AzureOpenAI.Endpoint,
+                apiKey: TestConfiguration.AzureOpenAI.ApiKey)
             .Build();
 
         // Invoke the kernel with a chat prompt and display the result

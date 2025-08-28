@@ -21,9 +21,10 @@ public sealed class Step2_Add_Plugins(ITestOutputHelper output) : BaseTest(outpu
     {
         // Create a kernel with ChatClient and plugins
         IKernelBuilder kernelBuilder = Kernel.CreateBuilder();
-        kernelBuilder.AddOpenAIChatClient(
-            modelId: TestConfiguration.OpenAI.ChatModelId,
-            apiKey: TestConfiguration.OpenAI.ApiKey);
+        kernelBuilder.AddAzureOpenAIChatClient(
+                deploymentName: TestConfiguration.AzureOpenAI.DeploymentName,
+                endpoint: TestConfiguration.AzureOpenAI.Endpoint,
+                apiKey: TestConfiguration.AzureOpenAI.ApiKey);
         kernelBuilder.Plugins.AddFromType<TimeInformation>();
         kernelBuilder.Plugins.AddFromType<WidgetFactory>();
         Kernel kernel = kernelBuilder.Build();
