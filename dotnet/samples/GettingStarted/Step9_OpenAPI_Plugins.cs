@@ -2,6 +2,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Plugins.OpenApi;
 using Resources;
 
 namespace GettingStarted;
@@ -11,6 +12,8 @@ namespace GettingStarted;
 /// </summary>
 public sealed class Step9_OpenAPI_Plugins(ITestOutputHelper output) : BaseTest(output)
 {
+    private const bool UseRemoteApiSwagger = true;
+
     /// <summary>
     /// Shows how to load an Open API <see cref="KernelPlugin"/> instance.
     /// </summary>
@@ -27,10 +30,11 @@ public sealed class Step9_OpenAPI_Plugins(ITestOutputHelper output) : BaseTest(o
 
         // Load OpenAPI plugin
         var stream = EmbeddedResource.ReadStream("repair-service.json");
-        var plugin = await kernel.ImportPluginFromOpenApiAsync("RepairService", stream!);
+        var plugin = UseRemoteApiSwagger ? await kernel.ImportPluginFromOpenApiAsync("RepairService", stream!) : await createPluginFromLocal(kernel);
+        kernel.Plugins.Add(TransformPlugin(plugin));
 
         PromptExecutionSettings settings = new() { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() };
-        Console.WriteLine(await kernel.InvokePromptAsync("List all of the repairs .", new(settings)));
+        Console.WriteLine(await kernel.InvokePromptAsync("List all of the repairs.", new(settings)));
     }
 
     /// <summary>
@@ -45,13 +49,23 @@ public sealed class Step9_OpenAPI_Plugins(ITestOutputHelper output) : BaseTest(o
 
         // Load OpenAPI plugin
         var stream = EmbeddedResource.ReadStream("repair-service.json");
-        var plugin = await kernel.CreatePluginFromOpenApiAsync("RepairService", stream!);
-
+        var plugin = UseRemoteApiSwagger ? await kernel.CreatePluginFromOpenApiAsync("RepairService", stream!) : await createPluginFromLocal(kernel);
         // Transform the plugin to use IMechanicService via dependency injection
         kernel.Plugins.Add(TransformPlugin(plugin));
 
         PromptExecutionSettings settings = new() { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() };
         Console.WriteLine(await kernel.InvokePromptAsync("Book an appointment to drain the old engine oil and replace it with fresh oil.", new(settings)));
+    }
+
+    private async Task<KernelPlugin> createPluginFromLocal(Kernel kernel)
+    {
+        return await kernel.CreatePluginFromOpenApiAsync(
+            pluginName: "RepairService",
+            uri: new Uri("http://localhost:5277/swagger/v1/swagger.json"),
+            executionParameters: new OpenApiFunctionExecutionParameters
+            {
+                EnablePayloadNamespacing = true
+            });
     }
 
     /// <summary>
@@ -63,9 +77,10 @@ public sealed class Step9_OpenAPI_Plugins(ITestOutputHelper output) : BaseTest(o
         collection.AddSingleton<IMechanicService>(new FakeMechanicService());
 
         // Add ChatClient using OpenAI
-        collection.AddOpenAIChatClient(
-            modelId: TestConfiguration.OpenAI.ChatModelId,
-            apiKey: TestConfiguration.OpenAI.ApiKey);
+        collection.AddAzureOpenAIChatClient(
+            deploymentName: TestConfiguration.AzureOpenAI.DeploymentName,
+            endpoint: TestConfiguration.AzureOpenAI.Endpoint,
+            apiKey: TestConfiguration.AzureOpenAI.ApiKey);
 
         var kernelBuilder = collection.AddKernel();
 
