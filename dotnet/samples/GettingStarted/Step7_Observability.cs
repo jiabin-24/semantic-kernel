@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel;
+using Azure.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
@@ -10,36 +11,36 @@ namespace GettingStarted;
 public sealed class Step7_Observability(ITestOutputHelper output) : BaseTest(output)
 {
     /// <summary>
-    /// Shows how to observe the execution of a <see cref="KernelPlugin"/> instance with filters.
+    /// 示範如何透過篩選器觀察 <see cref="KernelPlugin"/> 執行個體的執行過程。
     /// </summary>
     [Fact]
     public async Task ObservabilityWithFilters()
     {
-        // Create a kernel with OpenAI chat completion
+        // 建立具備 OpenAI 聊天補全能力的 Kernel
         IKernelBuilder kernelBuilder = Kernel.CreateBuilder();
         kernelBuilder.AddAzureOpenAIChatClient(
                 deploymentName: TestConfiguration.AzureOpenAI.DeploymentName,
                 endpoint: TestConfiguration.AzureOpenAI.Endpoint,
-                apiKey: TestConfiguration.AzureOpenAI.ApiKey);
+                credentials: new DefaultAzureCredential());
 
         kernelBuilder.Plugins.AddFromType<TimeInformation>();
 
-        // Add filter using DI
+        // 使用 DI 加入篩選器
         kernelBuilder.Services.AddSingleton<ITestOutputHelper>(this.Output);
         kernelBuilder.Services.AddSingleton<IFunctionInvocationFilter, MyFunctionFilter>();
 
         Kernel kernel = kernelBuilder.Build();
 
-        // Add filter without DI
+        // 不透過 DI 加入篩選器
         kernel.PromptRenderFilters.Add(new MyPromptFilter(this.Output));
 
-        // Invoke the kernel with a prompt and allow the AI to automatically invoke functions
+        // 以提示詞呼叫 Kernel，並允許 AI 自動呼叫函式
         OpenAIPromptExecutionSettings settings = new() { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() };
         Console.WriteLine(await kernel.InvokePromptAsync("How many days until Christmas? Explain your thinking.", new(settings)));
     }
 
     /// <summary>
-    /// A plugin that returns the current time.
+    /// 回傳目前時間的外掛。
     /// </summary>
     private sealed class TimeInformation
     {
@@ -49,7 +50,7 @@ public sealed class Step7_Observability(ITestOutputHelper output) : BaseTest(out
     }
 
     /// <summary>
-    /// Function filter for observability.
+    /// 用於可觀測性的函式篩選器。
     /// </summary>
     private sealed class MyFunctionFilter(ITestOutputHelper output) : IFunctionInvocationFilter
     {
@@ -71,7 +72,7 @@ public sealed class Step7_Observability(ITestOutputHelper output) : BaseTest(out
     }
 
     /// <summary>
-    /// Prompt filter for observability.
+    /// 用於可觀測性的提示詞篩選器。
     /// </summary>
     private sealed class MyPromptFilter(ITestOutputHelper output) : IPromptRenderFilter
     {

@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
+using Azure.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Plugins.OpenApi;
@@ -8,27 +9,27 @@ using Resources;
 namespace GettingStarted;
 
 /// <summary>
-/// This example shows how to load an Open API <see cref="KernelPlugin"/> instance.
+/// 此範例示範如何載入 Open API <see cref="KernelPlugin"/> 執行個體。
 /// </summary>
 public sealed class Step9_OpenAPI_Plugins(ITestOutputHelper output) : BaseTest(output)
 {
-    private const bool UseRemoteApiSwagger = true;
+    private const bool UseRemoteApiSwagger = false;
 
     /// <summary>
-    /// Shows how to load an Open API <see cref="KernelPlugin"/> instance.
+    /// 示範如何載入 Open API <see cref="KernelPlugin"/> 執行個體。
     /// </summary>
     [Fact]
     public async Task AddOpenAPIPlugins()
     {
-        // Create a kernel with OpenAI chat completion
+        // 建立具備 OpenAI 聊天補全能力的 Kernel
         IKernelBuilder kernelBuilder = Kernel.CreateBuilder();
         kernelBuilder.AddAzureOpenAIChatClient(
                 deploymentName: TestConfiguration.AzureOpenAI.DeploymentName,
                 endpoint: TestConfiguration.AzureOpenAI.Endpoint,
-                apiKey: TestConfiguration.AzureOpenAI.ApiKey);
+                credentials: new DefaultAzureCredential());
         Kernel kernel = kernelBuilder.Build();
 
-        // Load OpenAPI plugin
+        // 載入 OpenAPI 外掛
         var stream = EmbeddedResource.ReadStream("repair-service.json");
         var plugin = UseRemoteApiSwagger ? await kernel.ImportPluginFromOpenApiAsync("RepairService", stream!) : await createPluginFromLocal(kernel);
         kernel.Plugins.Add(TransformPlugin(plugin));
@@ -38,19 +39,19 @@ public sealed class Step9_OpenAPI_Plugins(ITestOutputHelper output) : BaseTest(o
     }
 
     /// <summary>
-    /// Shows how to transform an Open API <see cref="KernelPlugin"/> instance to support dependency injection with ChatClient.
+    /// 示範如何轉換 Open API <see cref="KernelPlugin"/> 執行個體，使其支援搭配 ChatClient 的相依性注入。
     /// </summary>
     [Fact]
     public async Task TransformOpenAPIPlugins()
     {
-        // Create a kernel with ChatClient and dependency injection
+        // 建立包含 ChatClient 與相依性注入的 Kernel
         var serviceProvider = BuildServiceProvider();
         var kernel = serviceProvider.GetRequiredService<Kernel>();
 
-        // Load OpenAPI plugin
+        // 載入 OpenAPI 外掛
         var stream = EmbeddedResource.ReadStream("repair-service.json");
         var plugin = UseRemoteApiSwagger ? await kernel.CreatePluginFromOpenApiAsync("RepairService", stream!) : await createPluginFromLocal(kernel);
-        // Transform the plugin to use IMechanicService via dependency injection
+        // 轉換外掛，透過相依性注入使用 IMechanicService
         kernel.Plugins.Add(TransformPlugin(plugin));
 
         PromptExecutionSettings settings = new() { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() };
@@ -69,18 +70,18 @@ public sealed class Step9_OpenAPI_Plugins(ITestOutputHelper output) : BaseTest(o
     }
 
     /// <summary>
-    /// Build a ServiceProvider that can be used to resolve services.
+    /// 建立可用於解析服務的 ServiceProvider。
     /// </summary>
     private ServiceProvider BuildServiceProvider()
     {
         var collection = new ServiceCollection();
         collection.AddSingleton<IMechanicService>(new FakeMechanicService());
 
-        // Add ChatClient using OpenAI
+        // 加入使用 OpenAI 的 ChatClient
         collection.AddAzureOpenAIChatClient(
             deploymentName: TestConfiguration.AzureOpenAI.DeploymentName,
             endpoint: TestConfiguration.AzureOpenAI.Endpoint,
-            apiKey: TestConfiguration.AzureOpenAI.ApiKey);
+            credentials: new DefaultAzureCredential());
 
         var kernelBuilder = collection.AddKernel();
 
@@ -88,7 +89,7 @@ public sealed class Step9_OpenAPI_Plugins(ITestOutputHelper output) : BaseTest(o
     }
 
     /// <summary>
-    /// Transform the plugin to change the behavior of the createRepair function.
+    /// 轉換外掛以變更 createRepair 函式的行為。
     /// </summary>
     public static KernelPlugin TransformPlugin(KernelPlugin plugin)
     {
@@ -110,9 +111,9 @@ public sealed class Step9_OpenAPI_Plugins(ITestOutputHelper output) : BaseTest(o
     }
 
     /// <summary>
-    /// Create a <see cref="KernelFunction"/> instance for the createRepair operation which only takes
-    /// the title, description parameters and has a delegate which uses the IMechanicService to get the
-    /// assignedTo.
+    /// 為 createRepair 作業建立 <see cref="KernelFunction"/> 執行個體，僅接收
+    /// title 與 description 參數，並透過委派使用 IMechanicService 取得
+    /// assignedTo。
     /// </summary>
     private static KernelFunction CreateRepairFunction(KernelFunction function)
     {
@@ -141,18 +142,18 @@ public sealed class Step9_OpenAPI_Plugins(ITestOutputHelper output) : BaseTest(o
     }
 
     /// <summary>
-    /// Interface for a service to get the mechanic to assign to the next job.
+    /// 取得下一個工作指派技師之服務介面。
     /// </summary>
     public interface IMechanicService
     {
         /// <summary>
-        /// Return the name of the mechanic to assign the next job to.
+        /// 回傳下一個工作要指派的技師名稱。
         /// </summary>
         string GetMechanic();
     }
 
     /// <summary>
-    /// Fake implementation of <see cref="IMechanicService"/>
+    /// <see cref="IMechanicService"/> 的模擬實作。
     /// </summary>
     public class FakeMechanicService : IMechanicService
     {

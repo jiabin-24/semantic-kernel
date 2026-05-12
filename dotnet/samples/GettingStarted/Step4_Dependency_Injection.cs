@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel;
+using Azure.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
@@ -8,22 +9,22 @@ using Microsoft.SemanticKernel;
 namespace GettingStarted;
 
 /// <summary>
-/// This example shows how to using Dependency Injection with the Semantic Kernel
+/// 此範例示範如何在 Semantic Kernel 中使用相依性注入。
 /// </summary>
 public sealed class Step4_Dependency_Injection(ITestOutputHelper output) : BaseTest(output)
 {
     /// <summary>
-    /// Show how to create a <see cref="Kernel"/> that participates in Dependency Injection.
+    /// 示範如何建立可參與相依性注入的 <see cref="Kernel"/>。
     /// </summary>
     [Fact]
     public async Task GetKernelUsingDependencyInjection()
     {
-        // If an application follows DI guidelines, the following line is unnecessary because DI will inject an instance of the KernelClient class to a class that references it.
-        // DI container guidelines - https://learn.microsoft.com/en-us/dotnet/core/extensions/dependency-injection-guidelines#recommendations
+        // 若應用程式遵循 DI 準則，則不需要下一行，因為 DI 會將 KernelClient 執行個體注入到相依類別中。
+        // DI 容器準則 - https://learn.microsoft.com/en-us/dotnet/core/extensions/dependency-injection-guidelines#recommendations
         var serviceProvider = BuildServiceProvider();
         var kernel = serviceProvider.GetRequiredService<Kernel>();
 
-        // Invoke the kernel with a templated prompt and stream the results to the display
+        // 以範本提示詞呼叫 Kernel，並以串流方式輸出結果
         KernelArguments arguments = new() { { "topic", "earth when viewed from space" } };
         await foreach (var update in
                        kernel.InvokePromptStreamingAsync("What color is the {{$topic}}? Provide a detailed explanation.", arguments))
@@ -33,23 +34,23 @@ public sealed class Step4_Dependency_Injection(ITestOutputHelper output) : BaseT
     }
 
     /// <summary>
-    /// Show how to use a plugin that participates in Dependency Injection.
+    /// 示範如何使用可參與相依性注入的外掛。
     /// </summary>
     [Fact]
     public async Task PluginUsingDependencyInjection()
     {
-        // If an application follows DI guidelines, the following line is unnecessary because DI will inject an instance of the Kernel class to a class that references it.
-        // DI container guidelines - https://learn.microsoft.com/en-us/dotnet/core/extensions/dependency-injection-guidelines#recommendations
+        // 若應用程式遵循 DI 準則，則不需要下一行，因為 DI 會將 Kernel 執行個體注入到相依類別中。
+        // DI 容器準則 - https://learn.microsoft.com/en-us/dotnet/core/extensions/dependency-injection-guidelines#recommendations
         var serviceProvider = BuildServiceProvider();
         var kernel = serviceProvider.GetRequiredService<Kernel>();
 
-        // Invoke the prompt which relies on invoking a plugin that depends on a service made available using Dependency Injection.
+        // 呼叫提示詞；該提示詞依賴一個透過 DI 提供服務的外掛。
         PromptExecutionSettings settings = new() { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() };
         Console.WriteLine(await kernel.InvokePromptAsync("Greet the current user by name.", new(settings)));
     }
 
     /// <summary>
-    /// Build a ServiceProvider that can be used to resolve services.
+    /// 建立可用於解析服務的 ServiceProvider。
     /// </summary>
     private ServiceProvider BuildServiceProvider()
     {
@@ -57,11 +58,11 @@ public sealed class Step4_Dependency_Injection(ITestOutputHelper output) : BaseT
         collection.AddSingleton<ILoggerFactory>(new XunitLogger(this.Output));
         collection.AddSingleton<IUserService>(new FakeUserService());
 
-        // Add ChatClient using OpenAI
+        // 加入使用 OpenAI 的 ChatClient
         collection.AddAzureOpenAIChatClient(
                 deploymentName: TestConfiguration.AzureOpenAI.DeploymentName,
                 endpoint: TestConfiguration.AzureOpenAI.Endpoint,
-                apiKey: TestConfiguration.AzureOpenAI.ApiKey);
+                credentials: new DefaultAzureCredential());
 
         var kernelBuilder = collection.AddKernel();
         kernelBuilder.Plugins.AddFromType<TimeInformation>();
@@ -71,7 +72,7 @@ public sealed class Step4_Dependency_Injection(ITestOutputHelper output) : BaseT
     }
 
     /// <summary>
-    /// A plugin that returns the current time.
+    /// 回傳目前時間的外掛。
     /// </summary>
     public class TimeInformation(ILoggerFactory loggerFactory)
     {
@@ -88,7 +89,7 @@ public sealed class Step4_Dependency_Injection(ITestOutputHelper output) : BaseT
     }
 
     /// <summary>
-    /// A plugin that returns the current time.
+    /// 回傳目前使用者名稱的外掛。
     /// </summary>
     public class UserInformation(IUserService userService)
     {
@@ -101,18 +102,18 @@ public sealed class Step4_Dependency_Injection(ITestOutputHelper output) : BaseT
     }
 
     /// <summary>
-    /// Interface for a service to get the current user id.
+    /// 取得目前使用者識別資訊之服務介面。
     /// </summary>
     public interface IUserService
     {
         /// <summary>
-        /// Return the user id for the current user.
+        /// 回傳目前使用者的識別資訊。
         /// </summary>
         string GetCurrentUsername();
     }
 
     /// <summary>
-    /// Fake implementation of <see cref="IUserService"/>
+    /// <see cref="IUserService"/> 的模擬實作。
     /// </summary>
     public class FakeUserService : IUserService
     {

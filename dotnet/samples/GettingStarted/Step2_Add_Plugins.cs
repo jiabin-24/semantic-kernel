@@ -2,6 +2,7 @@
 
 using System.ComponentModel;
 using System.Text.Json.Serialization;
+using Azure.Identity;
 using Microsoft.OpenApi.Extensions;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
@@ -9,40 +10,41 @@ using Microsoft.SemanticKernel.Connectors.OpenAI;
 namespace GettingStarted;
 
 /// <summary>
-/// This example shows how to load a <see cref="KernelPlugin"/> instances with ChatClient.
+/// 此範例示範如何搭配 ChatClient 載入 <see cref="KernelPlugin"/> 執行個體。
 /// </summary>
 public sealed class Step2_Add_Plugins(ITestOutputHelper output) : BaseTest(output)
 {
     /// <summary>
-    /// Shows different ways to load a <see cref="KernelPlugin"/> instances with ChatClient.
+    /// 示範使用 ChatClient 載入 <see cref="KernelPlugin"/> 執行個體的不同方式。
     /// </summary>
     [Fact]
     public async Task AddPlugins()
     {
-        // Create a kernel with ChatClient and plugins
+        // 建立包含 ChatClient 與外掛的 Kernel
         IKernelBuilder kernelBuilder = Kernel.CreateBuilder();
         kernelBuilder.AddAzureOpenAIChatClient(
                 deploymentName: TestConfiguration.AzureOpenAI.DeploymentName,
                 endpoint: TestConfiguration.AzureOpenAI.Endpoint,
-                apiKey: TestConfiguration.AzureOpenAI.ApiKey);
+                credentials: new DefaultAzureCredential());
+
         kernelBuilder.Plugins.AddFromType<TimeInformation>();
         kernelBuilder.Plugins.AddFromType<WidgetFactory>();
         Kernel kernel = kernelBuilder.Build();
 
-        // Example 1. Invoke the kernel with a prompt that asks the AI for information it cannot provide and may hallucinate
+        // 範例 1：用提示詞詢問 AI 無法提供、可能產生幻覺的資訊
         Console.WriteLine("Example 1: Asking the AI for information it cannot provide:");
         Console.WriteLine(await kernel.InvokePromptAsync("How many days until Christmas?"));
 
-        // Example 2. Use kernel for templated prompts that invoke plugins directly
+        // 範例 2：使用可直接呼叫外掛的範本提示詞
         Console.WriteLine("\nExample 2: Using templated prompts that invoke plugins directly:");
         Console.WriteLine(await kernel.InvokePromptAsync("The current time is {{TimeInformation.GetCurrentUtcTime}}. How many days until Christmas?"));
 
-        // Example 3. Use kernel with function calling for automatic plugin invocation
+        // 範例 3：搭配函式呼叫，讓外掛自動被呼叫
         OpenAIPromptExecutionSettings settings = new() { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() };
         Console.WriteLine("\nExample 3: Using function calling for automatic plugin invocation:");
         Console.WriteLine(await kernel.InvokePromptAsync("How many days until Christmas? Explain your thinking.", new(settings)));
 
-        // Example 4. Use kernel with function calling for complex scenarios with enumerations
+        // 範例 4：搭配函式呼叫與列舉型別處理較複雜情境
         Console.WriteLine("\nExample 4: Using function calling for complex scenarios with enumerations:");
         Console.WriteLine(await kernel.InvokePromptAsync("Create a handy lime colored widget for me.", new(settings)));
         Console.WriteLine(await kernel.InvokePromptAsync("Create a beautiful scarlet colored widget for me.", new(settings)));
@@ -50,7 +52,7 @@ public sealed class Step2_Add_Plugins(ITestOutputHelper output) : BaseTest(outpu
     }
 
     /// <summary>
-    /// A plugin that returns the current time.
+    /// 回傳目前時間的外掛。
     /// </summary>
     public class TimeInformation
     {
@@ -60,7 +62,7 @@ public sealed class Step2_Add_Plugins(ITestOutputHelper output) : BaseTest(outpu
     }
 
     /// <summary>
-    /// A plugin that creates widgets.
+    /// 建立小工具（Widget）的外掛。
     /// </summary>
     public class WidgetFactory
     {
@@ -79,7 +81,7 @@ public sealed class Step2_Add_Plugins(ITestOutputHelper output) : BaseTest(outpu
     }
 
     /// <summary>
-    /// A <see cref="JsonConverter"/> is required to correctly convert enum values.
+    /// 需要 <see cref="JsonConverter"/> 才能正確轉換列舉值。
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum WidgetType
@@ -92,7 +94,7 @@ public sealed class Step2_Add_Plugins(ITestOutputHelper output) : BaseTest(outpu
     }
 
     /// <summary>
-    /// A <see cref="JsonConverter"/> is required to correctly convert enum values.
+    /// 需要 <see cref="JsonConverter"/> 才能正確轉換列舉值。
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum WidgetColor

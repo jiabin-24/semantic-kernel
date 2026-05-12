@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.Globalization;
+using Azure.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
@@ -10,8 +11,8 @@ namespace GettingStarted;
 public sealed class Step8_Pipelining(ITestOutputHelper output) : BaseTest(output)
 {
     /// <summary>
-    /// Provides an example of combining multiple functions into a single function that invokes
-    /// them in a sequence, passing the output from one as input to the next.
+    /// 提供一個範例，示範如何將多個函式組合成單一函式，
+    /// 並依序呼叫，將前一個輸出作為下一個輸入。
     /// </summary>
     [Fact]
     public async Task CreateFunctionPipeline()
@@ -20,13 +21,13 @@ public sealed class Step8_Pipelining(ITestOutputHelper output) : BaseTest(output
         builder.AddAzureOpenAIChatClient(
                 deploymentName: TestConfiguration.AzureOpenAI.DeploymentName,
                 endpoint: TestConfiguration.AzureOpenAI.Endpoint,
-                apiKey: TestConfiguration.AzureOpenAI.ApiKey);
+                credentials: new DefaultAzureCredential());
         builder.Services.AddLogging(c => c.AddConsole().SetMinimumLevel(LogLevel.Trace));
         Kernel kernel = builder.Build();
 
         Console.WriteLine("================ PIPELINE ================");
         {
-            // Create a pipeline of functions that will parse a string into a double, multiply it by a double, truncate it to an int, and then humanize it.
+            // 建立一個函式管線：將字串解析為 double、乘上一個 double、截斷為 int，最後轉為自然語言描述。
             KernelFunction parseDouble = KernelFunctionFactory.CreateFromMethod((string s) => double.Parse(s, CultureInfo.InvariantCulture), "parseDouble");
             KernelFunction multiplyByN = KernelFunctionFactory.CreateFromMethod((double i, double n) => i * n, "multiplyByN");
             KernelFunction truncate = KernelFunctionFactory.CreateFromMethod((double d) => (int)d, "truncate");
@@ -43,9 +44,9 @@ public sealed class Step8_Pipelining(ITestOutputHelper output) : BaseTest(output
                 ["n"] = (double)78.90,
             };
 
-            // - The parseInt32 function will be invoked, read "123.456" from the arguments, and parse it into (double)123.456.
-            // - The multiplyByN function will be invoked, with i=123.456 and n=78.90, and return (double)9740.6784.
-            // - The truncate function will be invoked, with d=9740.6784, and return (int)9740, which will be the final result.
+            // - 會呼叫 parseInt32 函式，從參數讀取 "123.456"，並解析為 (double)123.456。
+            // - 會呼叫 multiplyByN 函式，帶入 i=123.456 與 n=78.90，回傳 (double)9740.6784。
+            // - 會呼叫 truncate 函式，帶入 d=9740.6784，回傳 (int)9740，作為最終結果。
             Console.WriteLine(await pipeline.InvokeAsync(kernel, args));
         }
 
@@ -54,9 +55,9 @@ public sealed class Step8_Pipelining(ITestOutputHelper output) : BaseTest(output
             KernelFunction rand = KernelFunctionFactory.CreateFromMethod(() => Random.Shared.Next(), "GetRandomInt32");
             KernelFunction mult = KernelFunctionFactory.CreateFromMethod((int i, int j) => i * j, "Multiply");
 
-            // - Invokes rand and stores the random number into args["i"]
-            // - Invokes rand and stores the random number into args["j"]
-            // - Multiplies arg["i"] and args["j"] to produce the final result
+            // - 呼叫 rand，並將隨機數存入 args["i"]
+            // - 呼叫 rand，並將隨機數存入 args["j"]
+            // - 將 arg["i"] 與 args["j"] 相乘，得到最終結果
             KernelFunction graph = KernelFunctionCombinators.Pipe(new[]
             {
                 (rand, "i"),
@@ -72,36 +73,36 @@ public sealed class Step8_Pipelining(ITestOutputHelper output) : BaseTest(output
 public static class KernelFunctionCombinators
 {
     /// <summary>
-    /// Invokes a pipeline of functions, running each in order and passing the output from one as the first argument to the next.
+    /// 呼叫函式管線，依序執行每個函式，並將前一個輸出作為下一個函式的第一個參數。
     /// </summary>
-    /// <param name="functions">The pipeline of functions to invoke.</param>
-    /// <param name="kernel">The kernel to use for the operations.</param>
-    /// <param name="arguments">The arguments.</param>
-    /// <param name="cancellationToken">The cancellation token to monitor for a cancellation request.</param>
+    /// <param name="functions">要呼叫的函式管線。</param>
+    /// <param name="kernel">執行作業所使用的 Kernel。</param>
+    /// <param name="arguments">參數集合。</param>
+    /// <param name="cancellationToken">用於監控取消要求的取消權杖。</param>
     public static Task<FunctionResult> InvokePipelineAsync(
         IEnumerable<KernelFunction> functions, Kernel kernel, KernelArguments arguments, CancellationToken cancellationToken) =>
         Pipe(functions).InvokeAsync(kernel, arguments, cancellationToken);
 
     /// <summary>
-    /// Invokes a pipeline of functions, running each in order and passing the output from one as the named argument to the next.
+    /// 呼叫函式管線，依序執行每個函式，並將前一個輸出以指定參數名稱傳給下一個函式。
     /// </summary>
-    /// <param name="functions">The sequence of functions to invoke, along with the name of the argument to assign to the result of the function's invocation.</param>
-    /// <param name="kernel">The kernel to use for the operations.</param>
-    /// <param name="arguments">The arguments.</param>
-    /// <param name="cancellationToken">The cancellation token to monitor for a cancellation request.</param>
+    /// <param name="functions">要呼叫的函式序列，以及每次函式呼叫結果要指派的參數名稱。</param>
+    /// <param name="kernel">執行作業所使用的 Kernel。</param>
+    /// <param name="arguments">參數集合。</param>
+    /// <param name="cancellationToken">用於監控取消要求的取消權杖。</param>
     public static Task<FunctionResult> InvokePipelineAsync(
         IEnumerable<(KernelFunction Function, string OutputVariable)> functions, Kernel kernel, KernelArguments arguments, CancellationToken cancellationToken) =>
         Pipe(functions).InvokeAsync(kernel, arguments, cancellationToken);
 
     /// <summary>
-    /// Creates a function whose invocation will invoke each of the supplied functions in sequence.
+    /// 建立一個函式；呼叫此函式時會依序呼叫所有提供的函式。
     /// </summary>
-    /// <param name="functions">The pipeline of functions to invoke.</param>
-    /// <param name="functionName">The name of the combined operation.</param>
-    /// <param name="description">The description of the combined operation.</param>
-    /// <returns>The result of the final function.</returns>
+    /// <param name="functions">要呼叫的函式管線。</param>
+    /// <param name="functionName">組合後作業的名稱。</param>
+    /// <param name="description">組合後作業的描述。</param>
+    /// <returns>最後一個函式的結果。</returns>
     /// <remarks>
-    /// The result from one function will be fed into the first argument of the next function.
+    /// 前一個函式的結果會餵入下一個函式的第一個參數。
     /// </remarks>
     public static KernelFunction Pipe(
         IEnumerable<KernelFunction> functions,
@@ -133,14 +134,14 @@ public static class KernelFunctionCombinators
     }
 
     /// <summary>
-    /// Creates a function whose invocation will invoke each of the supplied functions in sequence.
+    /// 建立一個函式；呼叫此函式時會依序呼叫所有提供的函式。
     /// </summary>
-    /// <param name="functions">The pipeline of functions to invoke, along with the name of the argument to assign to the result of the function's invocation.</param>
-    /// <param name="functionName">The name of the combined operation.</param>
-    /// <param name="description">The description of the combined operation.</param>
-    /// <returns>The result of the final function.</returns>
+    /// <param name="functions">要呼叫的函式管線，以及每次函式呼叫結果要指派的參數名稱。</param>
+    /// <param name="functionName">組合後作業的名稱。</param>
+    /// <param name="description">組合後作業的描述。</param>
+    /// <returns>最後一個函式的結果。</returns>
     /// <remarks>
-    /// The result from one function will be fed into the first argument of the next function.
+    /// 前一個函式的結果會餵入下一個函式的第一個參數。
     /// </remarks>
     public static KernelFunction Pipe(
         IEnumerable<(KernelFunction Function, string OutputVariable)> functions,

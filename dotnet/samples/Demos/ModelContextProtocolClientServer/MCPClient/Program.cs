@@ -12,19 +12,19 @@ internal sealed class Program
     /// </summary>
     public static async Task Main(string[] args)
     {
-        await MCPToolsSample.RunAsync();
+        //await MCPToolsSample.RunAsync();
 
-        await MCPPromptSample.RunAsync();
+        //await MCPPromptSample.RunAsync();
 
-        await MCPResourcesSample.RunAsync();
+        //await MCPResourcesSample.RunAsync();
 
-        await MCPResourceTemplatesSample.RunAsync();
+        //await MCPResourceTemplatesSample.RunAsync();
 
-        await MCPSamplingSample.RunAsync();
+        //await MCPSamplingSample.RunAsync();
 
-        await ChatCompletionAgentWithMCPToolsSample.RunAsync();
+        //await ChatCompletionAgentWithMCPToolsSample.RunAsync();
 
-        await AzureAIAgentWithMCPToolsSample.RunAsync();
+        //await AzureAIAgentWithMCPToolsSample.RunAsync();
 
         await AgentAvailableAsMCPToolSample.RunAsync();
     }
