@@ -4,6 +4,8 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using System.Collections.Generic;
+using System.Text.Json;
 
 namespace MCPServer.Prompts;
 
@@ -89,27 +91,64 @@ public sealed class PromptDefinition
         // Use either explicitly provided kernel or the one registered in DI container
         kernel ??= context.Server.Services?.GetRequiredService<Kernel>() ?? throw new InvalidOperationException("Kernel is not available.");
 
-        // Render the prompt
-        string renderedPrompt = await promptTemplate.RenderAsync(
-            kernel: kernel,
-            arguments: context.Params?.Arguments is { } args ? new KernelArguments(args.ToDictionary(kvp => kvp.Key, kvp => (object?)kvp.Value)) : null,
-            cancellationToken: cancellationToken);
-
-        // Create prompt result
-        return new GetPromptResult()
+        try
         {
-            Description = promptTemplateConfig.Description,
-            Messages =
-            [
-                new PromptMessage()
+            KernelArguments? kernelArguments = null;
+            if (context.Params?.Arguments is { } args)
+            {
+                kernelArguments = new KernelArguments();
+                foreach (var (key, value) in args)
                 {
-                    Content = new TextContentBlock()
-                    {
-                        Text = renderedPrompt
-                    },
-                    Role = Role.Assistant
+                    kernelArguments[key] = NormalizeArgumentValue(value);
                 }
-            ]
+            }
+
+            // Render the prompt
+            string renderedPrompt = await promptTemplate.RenderAsync(
+                kernel: kernel,
+                arguments: kernelArguments,
+                cancellationToken: cancellationToken);
+
+            // Create prompt result
+            return new GetPromptResult()
+            {
+                Description = promptTemplateConfig.Description,
+                Messages =
+                [
+                    new PromptMessage()
+                    {
+                        Content = new TextContentBlock()
+                        {
+                            Text = renderedPrompt
+                        },
+                        Role = Role.Assistant
+                    }
+                ]
+            };
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"GetPrompt failed. Prompt={promptTemplateConfig.Name}, Args={JsonSerializer.Serialize(context.Params?.Arguments)}");
+            Console.Error.WriteLine(ex);
+            throw;
+        }
+    }
+
+    private static object? NormalizeArgumentValue(object? value)
+    {
+        if (value is not JsonElement jsonElement)
+        {
+            return value;
+        }
+
+        return jsonElement.ValueKind switch
+        {
+            JsonValueKind.String => jsonElement.GetString(),
+            JsonValueKind.Number => jsonElement.GetRawText(),
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Null or JsonValueKind.Undefined => null,
+            _ => jsonElement.GetRawText(),
         };
     }
 }

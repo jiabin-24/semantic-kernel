@@ -12,48 +12,48 @@ using ModelContextProtocol.Protocol;
 namespace MCPClient.Samples;
 
 /// <summary>
-/// Demonstrates how to use the Model Context Protocol (MCP) resources with the Semantic Kernel.
+/// 示範如何在 Semantic Kernel 中使用 Model Context Protocol (MCP) 資源。
 /// </summary>
 internal sealed class MCPResourcesSample : BaseSample
 {
     /// <summary>
-    /// Demonstrates how to use the MCP resources with the Semantic Kernel.
-    /// The code in this method:
-    /// 1. Creates an MCP client.
-    /// 2. Retrieves the list of resources provided by the MCP server.
-    /// 3. Retrieves the `image://cat.jpg` resource content from the MCP server.
-    /// 4. Adds the image to the chat history and prompts the AI model to describe the content of the image.
+    /// 示範如何在 Semantic Kernel 中使用 MCP 資源。
+    /// 此方法中的程式碼流程：
+    /// 1. 建立 MCP 用戶端。
+    /// 2. 取得 MCP 伺服器提供的資源清單。
+    /// 3. 從 MCP 伺服器取得 `image://cat.jpg` 資源內容。
+    /// 4. 將影像加入聊天歷程，並要求 AI 模型描述影像內容。
     /// </summary>
     public static async Task RunAsync()
     {
         Console.WriteLine($"Running the {nameof(MCPResourcesSample)} sample.");
 
-        // Create an MCP client
+        // 建立 MCP 用戶端
         await using IMcpClient mcpClient = await CreateMcpClientAsync();
 
-        // Retrieve list of resources provided by the MCP server and display them
+        // 取得並顯示 MCP 伺服器提供的資源清單
         IList<McpClientResource> resources = await mcpClient.ListResourcesAsync();
         DisplayResources(resources);
 
-        // Create a kernel
+        // 建立 Kernel
         Kernel kernel = CreateKernelWithChatCompletionService();
 
-        // Enable automatic function calling
+        // 啟用自動函式呼叫
         OpenAIPromptExecutionSettings executionSettings = new()
         {
             Temperature = 0,
             FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(options: new() { RetainArgumentTypes = true })
         };
 
-        // Retrieve the `image://cat.jpg` resource from the MCP server
+        // 從 MCP 伺服器取得 `image://cat.jpg` 資源
         ReadResourceResult resource = await mcpClient.ReadResourceAsync("image://cat.jpg");
 
-        // Add the resource to the chat history and prompt the AI model to describe the content of the image
+        // 將資源加入聊天歷程，並提示 AI 模型描述影像內容
         ChatHistory chatHistory = [];
         chatHistory.AddUserMessage(resource.ToChatMessageContentItemCollection());
         chatHistory.AddUserMessage("Describe the content of the image?");
 
-        // Execute a prompt using the MCP resource and prompt added to the chat history
+        // 使用加入聊天歷程的 MCP 資源與提示詞執行對話
         IChatCompletionService chatCompletion = kernel.GetRequiredService<IChatCompletionService>();
 
         ChatMessageContent result = await chatCompletion.GetChatMessageContentAsync(chatHistory, executionSettings, kernel);
@@ -61,14 +61,14 @@ internal sealed class MCPResourcesSample : BaseSample
         Console.WriteLine(result);
         Console.WriteLine();
 
-        // The expected output is: The image features a fluffy cat sitting in a lush, colorful garden.
+        // 預期輸出：The image features a fluffy cat sitting in a lush, colorful garden.
         // The garden is filled with various flowers and plants, creating a vibrant and serene atmosphere...
     }
 
     /// <summary>
-    /// Displays the list of resources provided by the MCP server.
+    /// 顯示 MCP 伺服器提供的資源清單。
     /// </summary>
-    /// <param name="resources">The list of resources to display.</param>
+    /// <param name="resources">要顯示的資源清單。</param>
     private static void DisplayResources(IList<McpClientResource> resources)
     {
         Console.WriteLine("Available MCP resources:");

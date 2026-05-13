@@ -14,46 +14,46 @@ using ModelContextProtocol.Client;
 namespace MCPClient.Samples;
 
 /// <summary>
-/// Demonstrates how to use <see cref="AzureAIAgent"/> with MCP tools represented as Kernel functions.
+/// 示範如何使用 <see cref="AzureAIAgent"/> 搭配以 Kernel 函式表示的 MCP 工具。
 /// </summary>
 internal sealed class AzureAIAgentWithMCPToolsSample : BaseSample
 {
     /// <summary>
-    /// Demonstrates how to use <see cref="AzureAIAgent"/> with MCP tools represented as Kernel functions.
-    /// The code in this method:
-    /// 1. Creates an MCP client.
-    /// 2. Retrieves the list of tools provided by the MCP server.
-    /// 3. Creates a kernel and registers the MCP tools as Kernel functions.
-    /// 4. Defines Azure AI agent with instructions, name, kernel, and arguments.
-    /// 5. Invokes the agent with a prompt.
-    /// 6. The agent sends the prompt to the AI model, together with the MCP tools represented as Kernel functions.
-    /// 7. The AI model calls DateTimeUtils-GetCurrentDateTimeInUtc function to get the current date time in UTC required as an argument for the next function.
-    /// 8. The AI model calls WeatherUtils-GetWeatherForCity function with the current date time and the `Boston` arguments extracted from the prompt to get the weather information.
-    /// 9. Having received the weather information from the function call, the AI model returns the answer to the agent and the agent returns the answer to the user.
+    /// 示範如何使用 <see cref="AzureAIAgent"/> 搭配以 Kernel 函式表示的 MCP 工具。
+    /// 此方法中的程式碼流程：
+    /// 1. 建立 MCP 用戶端。
+    /// 2. 取得 MCP 伺服器提供的工具清單。
+    /// 3. 建立 Kernel，並將 MCP 工具註冊為 Kernel 函式。
+    /// 4. 定義 Azure AI Agent（含指示、名稱、Kernel 與參數）。
+    /// 5. 以提示詞呼叫 Agent。
+    /// 6. Agent 將提示詞與以 Kernel 函式表示的 MCP 工具一併送到 AI 模型。
+    /// 7. AI 模型呼叫 DateTimeUtils-GetCurrentDateTimeInUtc 函式，取得下一個函式所需的 UTC 目前時間。
+    /// 8. AI 模型呼叫 WeatherUtils-GetWeatherForCity 函式，使用目前時間與從提示詞擷取的 `Boston` 參數取得天氣資訊。
+    /// 9. AI 模型收到函式回傳的天氣資訊後回覆 Agent，再由 Agent 回覆使用者。
     /// </summary>
     public static async Task RunAsync()
     {
         Console.WriteLine($"Running the {nameof(AzureAIAgentWithMCPToolsSample)} sample.");
 
-        // Create an MCP client
+        // 建立 MCP 用戶端
         await using IMcpClient mcpClient = await CreateMcpClientAsync();
 
-        // Retrieve and display the list provided by the MCP server
+        // 取得並顯示 MCP 伺服器提供的工具清單
         IList<McpClientTool> tools = await mcpClient.ListToolsAsync();
         DisplayTools(tools);
 
-        // Create a kernel and register the MCP tools as Kernel functions
+        // 建立 Kernel 並將 MCP 工具註冊為 Kernel 函式
         Kernel kernel = new();
         kernel.Plugins.AddFromFunctions("Tools", tools.Select(aiFunction => aiFunction.AsKernelFunction()));
 
-        // Define the agent using the kernel with registered MCP tools
+        // 使用已註冊 MCP 工具的 Kernel 定義 Agent
         AzureAIAgent agent = await CreateAzureAIAgentAsync(
             name: "WeatherAgent",
             instructions: "Answer questions about the weather.",
             kernel: kernel
         );
 
-        // Invokes agent with a prompt
+        // 以提示詞呼叫 Agent
         string prompt = "What is the likely color of the sky in Boston today?";
         Console.WriteLine(prompt);
 
@@ -61,25 +61,25 @@ internal sealed class AzureAIAgentWithMCPToolsSample : BaseSample
         Console.WriteLine(response.Message);
         Console.WriteLine();
 
-        // The expected output is: Today in Boston, the weather is 61°F and rainy. Due to the rain, the likely color of the sky will be gray.
+        // 預期輸出：Today in Boston, the weather is 61°F and rainy. Due to the rain, the likely color of the sky will be gray.
 
-        // Delete the agent thread after use
+        // 使用後刪除 Agent 執行緒
         await response!.Thread.DeleteAsync();
 
-        // Delete the agent after use
+        // 使用後刪除 Agent
         await agent.Client.Administration.DeleteAgentAsync(agent.Id);
     }
 
     /// <summary>
-    /// Creates an instance of <see cref="AzureAIAgent"/> with the specified name and instructions.
+    /// 依指定名稱與指示建立 <see cref="AzureAIAgent"/> 執行個體。
     /// </summary>
-    /// <param name="kernel">The kernel instance.</param>
-    /// <param name="name">The name of the agent.</param>
-    /// <param name="instructions">The instructions for the agent.</param>
-    /// <returns>An instance of <see cref="AzureAIAgent"/>.</returns>
+    /// <param name="kernel">Kernel 執行個體。</param>
+    /// <param name="name">Agent 名稱。</param>
+    /// <param name="instructions">Agent 指示內容。</param>
+    /// <returns><see cref="AzureAIAgent"/> 執行個體。</returns>
     private static async Task<AzureAIAgent> CreateAzureAIAgentAsync(Kernel kernel, string name, string instructions)
     {
-        // Load and validate configuration
+        // 載入並驗證設定
         IConfigurationRoot config = new ConfigurationBuilder()
             .AddUserSecrets<Program>()
             .AddEnvironmentVariables()
@@ -94,13 +94,13 @@ internal sealed class AzureAIAgentWithMCPToolsSample : BaseSample
 
         string modelId = config["AzureAI:ChatModelId"] ?? "gpt-4o-mini";
 
-        // 使用 Service Principal 登录
+        // 使用 Service Principal 登入
         var tenantId = config["AzureAI:TenantId"];
         var clientId = config["AzureAI:ClientId"];
         var clientSecret = config["AzureAI:ClientSecret"];
         var credential = new Azure.Identity.ClientSecretCredential(tenantId, clientId, clientSecret);
 
-        // Create the Azure AI Agent
+        // 建立 Azure AI Agent
         PersistentAgentsClient agentsClient = AzureAIAgent.CreateAgentsClient(endpoint, credential);
         PersistentAgent agent = await agentsClient.Administration.CreateAgentAsync(modelId, name, null, instructions);
 

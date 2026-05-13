@@ -8,13 +8,13 @@ namespace MCPClient;
 internal sealed class Program
 {
     /// <summary>
-    /// Main method to run all the samples.
+    /// 執行所有範例的主要方法。
     /// </summary>
     public static async Task Main(string[] args)
     {
         //await MCPToolsSample.RunAsync();
 
-        //await MCPPromptSample.RunAsync();
+        await MCPPromptSample.RunAsync();
 
         //await MCPResourcesSample.RunAsync();
 
@@ -26,6 +26,6 @@ internal sealed class Program
 
         //await AzureAIAgentWithMCPToolsSample.RunAsync();
 
-        await AgentAvailableAsMCPToolSample.RunAsync();
+        //await AgentAvailableAsMCPToolSample.RunAsync();
     }
 }

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.SemanticKernel;
 using ModelContextProtocol;
@@ -90,7 +91,10 @@ internal abstract class BaseSample
         var kernelBuilder = Kernel.CreateBuilder();
         if (config["AzureOpenAI:DeploymentName"] != null)
         {
-            kernelBuilder.AddAzureOpenAIChatCompletion(config["AzureOpenAI:DeploymentName"]!, config["AzureOpenAI:Endpoint"]!, config["AzureOpenAI:ApiKey"]!);
+            kernelBuilder.AddAzureOpenAIChatCompletion(
+                deploymentName: config["AzureOpenAI:DeploymentName"]!,
+                endpoint: config["AzureOpenAI:Endpoint"]!,
+                credentials: new DefaultAzureCredential());
         }
         else
         {

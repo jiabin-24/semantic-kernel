@@ -15,52 +15,52 @@ using ModelContextProtocol.Protocol;
 namespace MCPClient.Samples;
 
 /// <summary>
-/// Demonstrates how to use the Model Context Protocol (MCP) sampling with the Semantic Kernel.
+/// 示範如何在 Semantic Kernel 中使用 Model Context Protocol (MCP) 取樣功能。
 /// </summary>
 internal sealed class MCPSamplingSample : BaseSample
 {
     /// <summary>
-    /// Demonstrates how to use the MCP sampling with the Semantic Kernel.
-    /// The code in this method:
-    /// 1. Creates an MCP client and register the sampling request handler.
-    /// 2. Retrieves the list of tools provided by the MCP server and registers them as Kernel functions.
-    /// 3. Prompts the AI model to create a schedule based on the latest unread emails in the mailbox.
-    /// 4. The AI model calls the `MailboxUtils-SummarizeUnreadEmails` function to summarize the unread emails.
-    /// 5. The `MailboxUtils-SummarizeUnreadEmails` function creates a few sample emails with attachments and
-    ///    sends a sampling request to the client to summarize them:
-    ///    5.1. The client receive sampling request from server and invokes the sampling request handler.
-    ///    5.2. SK intercepts the sampling request invocation via `HumanInTheLoopFilter` filter to enable human-in-the-loop processing.
-    ///    5.3. The `HumanInTheLoopFilter` allows invocation of the sampling request handler.
-    ///    5.5. The sampling request handler sends the sampling request to the AI model to summarize the emails.
-    ///    5.6. The AI model processes the request and returns the summary to the handler which sends it back to the server.
-    ///    5.7. The `MailboxUtils-SummarizeUnreadEmails` function receives the result and returns it to the AI model.
-    /// 7. Having received the summary, the AI model creates a schedule based on the unread emails.
+    /// 示範如何在 Semantic Kernel 中使用 MCP 取樣功能。
+    /// 此方法中的程式碼流程：
+    /// 1. 建立 MCP 用戶端並註冊取樣請求處理常式。
+    /// 2. 取得 MCP 伺服器提供的工具清單並註冊為 Kernel 函式。
+    /// 3. 提示 AI 模型根據信箱最新未讀郵件建立行程。
+    /// 4. AI 模型呼叫 `MailboxUtils-SummarizeUnreadEmails` 函式來彙整未讀郵件。
+    /// 5. `MailboxUtils-SummarizeUnreadEmails` 函式建立數封含附件的範例郵件，
+    ///    並送出取樣請求給用戶端以產生摘要：
+    ///    5.1. 用戶端接收來自伺服器的取樣請求，並呼叫取樣請求處理常式。
+    ///    5.2. SK 透過 `HumanInTheLoopFilter` 攔截取樣請求呼叫，以啟用人類在迴圈（HITL）流程。
+    ///    5.3. `HumanInTheLoopFilter` 允許取樣請求處理常式繼續執行。
+    ///    5.5. 取樣請求處理常式將取樣請求送至 AI 模型以摘要郵件。
+    ///    5.6. AI 模型處理請求並將摘要回傳給處理常式，再由處理常式回送至伺服器。
+    ///    5.7. `MailboxUtils-SummarizeUnreadEmails` 函式接收結果後回傳給 AI 模型。
+    /// 7. AI 模型在收到摘要後，根據未讀郵件建立行程。
     /// </summary>
     public static async Task RunAsync()
     {
         Console.WriteLine($"Running the {nameof(MCPSamplingSample)} sample.");
 
-        // Create a kernel
+        // 建立 Kernel
         Kernel kernel = CreateKernelWithChatCompletionService();
 
-        // Register the human-in-the-loop filter that intercepts function calls allowing users to review and approve or reject them
+        // 註冊人類在迴圈篩選器，攔截函式呼叫以供使用者檢視並核准或拒絕
         kernel.FunctionInvocationFilters.Add(new HumanInTheLoopFilter());
 
-        // Create an MCP client with a custom sampling request handler
+        // 建立含自訂取樣請求處理常式的 MCP 用戶端
         await using IMcpClient mcpClient = await CreateMcpClientAsync(kernel, SamplingRequestHandlerAsync);
 
-        // Import MCP tools as Kernel functions so AI model can call them
+        // 將 MCP 工具匯入為 Kernel 函式，讓 AI 模型可直接呼叫
         IList<McpClientTool> tools = await mcpClient.ListToolsAsync();
         kernel.Plugins.AddFromFunctions("Tools", tools.Select(aiFunction => aiFunction.AsKernelFunction()));
 
-        // Enable automatic function calling
+        // 啟用自動函式呼叫
         OpenAIPromptExecutionSettings executionSettings = new()
         {
             Temperature = 0,
             FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(options: new() { RetainArgumentTypes = true })
         };
 
-        // Execute a prompt
+        // 執行提示詞
         string prompt = "Create a schedule for me based on the latest unread emails in my inbox.";
         IChatCompletionService chatCompletion = kernel.GetRequiredService<IChatCompletionService>();
         ChatMessageContent result = await chatCompletion.GetChatMessageContentAsync(prompt, executionSettings, kernel);
@@ -68,7 +68,7 @@ internal sealed class MCPSamplingSample : BaseSample
         Console.WriteLine(result);
         Console.WriteLine();
 
-        // The expected output is:
+        // 預期輸出：
         // ### Today
         // - **Review Sales Report:**
         //   - **Task:** Provide feedback on the Carretera Sales Report for January to June 2014.
@@ -93,13 +93,13 @@ internal sealed class MCPSamplingSample : BaseSample
     }
 
     /// <summary>
-    /// Handles sampling requests from the MCP client.
+    /// 處理來自 MCP 用戶端的取樣請求。
     /// </summary>
-    /// <param name="kernel">The kernel instance.</param>
-    /// <param name="request">The sampling request.</param>
-    /// <param name="progress">The progress notification.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The result of the sampling request.</returns>
+    /// <param name="kernel">Kernel 執行個體。</param>
+    /// <param name="request">取樣請求。</param>
+    /// <param name="progress">進度通知。</param>
+    /// <param name="cancellationToken">取消權杖。</param>
+    /// <returns>取樣請求的結果。</returns>
     private static async Task<CreateMessageResult> SamplingRequestHandlerAsync(Kernel kernel, CreateMessageRequestParams? request, IProgress<ProgressNotificationValue> progress, CancellationToken cancellationToken)
     {
         if (request is null)
@@ -107,7 +107,7 @@ internal sealed class MCPSamplingSample : BaseSample
             throw new ArgumentNullException(nameof(request));
         }
 
-        // Map the MCP sampling request to the Semantic Kernel prompt execution settings
+        // 將 MCP 取樣請求對應到 Semantic Kernel 提示詞執行設定
         OpenAIPromptExecutionSettings promptExecutionSettings = new()
         {
             Temperature = request.Temperature,
@@ -115,7 +115,7 @@ internal sealed class MCPSamplingSample : BaseSample
             StopSequences = request.StopSequences?.ToList(),
         };
 
-        // Create a chat history from the MCP sampling request
+        // 由 MCP 取樣請求建立聊天歷程
         ChatHistory chatHistory = [];
         if (!string.IsNullOrEmpty(request.SystemPrompt))
         {
@@ -123,7 +123,7 @@ internal sealed class MCPSamplingSample : BaseSample
         }
         chatHistory.AddRange(request.Messages.ToChatMessageContents());
 
-        // Prompt the AI model to generate a response
+        // 提示 AI 模型產生回應
         IChatCompletionService chatCompletion = kernel.GetRequiredService<IChatCompletionService>();
         ChatMessageContent result = await chatCompletion.GetChatMessageContentAsync(chatHistory, promptExecutionSettings, cancellationToken: cancellationToken);
 

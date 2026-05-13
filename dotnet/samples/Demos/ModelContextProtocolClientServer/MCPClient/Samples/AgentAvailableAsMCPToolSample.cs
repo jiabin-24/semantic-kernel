@@ -11,39 +11,39 @@ using ModelContextProtocol.Client;
 namespace MCPClient.Samples;
 
 /// <summary>
-/// Demonstrates how to use SK agent available as MCP tool.
+/// 示範如何使用可作為 MCP 工具的 SK Agent。
 /// </summary>
 internal sealed class AgentAvailableAsMCPToolSample : BaseSample
 {
     /// <summary>
-    /// Demonstrates how to use SK agent available as MCP tool.
-    /// The code in this method:
-    /// 1. Creates an MCP client.
-    /// 2. Retrieves the list of tools provided by the MCP server.
-    /// 3. Creates a kernel and registers the MCP tools as Kernel functions.
-    /// 4. Sends the prompt to AI model together with the MCP tools represented as Kernel functions.
-    /// 5. The AI model calls the `Agents_SalesAssistant` function, which calls the MCP tool that calls the SK agent on the server.
-    /// 6. The agent calls the `OrderProcessingUtils-PlaceOrder` function to place the order for the `Grande Mug`.
-    /// 7. The agent calls the `OrderProcessingUtils-ReturnOrder` function to return the `Wide Rim Mug`.
-    /// 8. The agent summarizes the transactions and returns the result as part of the `Agents_SalesAssistant` function call.
-    /// 9. Having received the result from the `Agents_SalesAssistant`, the AI model returns the answer to the prompt.
+    /// 示範如何使用可作為 MCP 工具的 SK Agent。
+    /// 此方法中的程式碼流程：
+    /// 1. 建立 MCP 用戶端。
+    /// 2. 取得 MCP 伺服器提供的工具清單。
+    /// 3. 建立 Kernel，並將 MCP 工具註冊為 Kernel 函式。
+    /// 4. 將提示詞連同以 Kernel 函式表示的 MCP 工具一併送到 AI 模型。
+    /// 5. AI 模型呼叫 `Agents_SalesAssistant` 函式，該函式會呼叫 MCP 工具，再由工具呼叫伺服器上的 SK Agent。
+    /// 6. Agent 呼叫 `OrderProcessingUtils-PlaceOrder` 函式，為 `Grande Mug` 下訂單。
+    /// 7. Agent 呼叫 `OrderProcessingUtils-ReturnOrder` 函式，退回 `Wide Rim Mug`。
+    /// 8. Agent 彙整交易內容，並將結果作為 `Agents_SalesAssistant` 函式呼叫的一部分回傳。
+    /// 9. AI 模型收到 `Agents_SalesAssistant` 的結果後，回覆提示詞答案。
     /// </summary>
     public static async Task RunAsync()
     {
         Console.WriteLine($"Running the {nameof(AgentAvailableAsMCPToolSample)} sample.");
 
-        // Create an MCP client
+        // 建立 MCP 用戶端
         await using IMcpClient mcpClient = await CreateMcpClientAsync();
 
-        // Retrieve and display the list provided by the MCP server
+        // 取得並顯示 MCP 伺服器提供的工具清單
         IList<McpClientTool> tools = await mcpClient.ListToolsAsync();
         DisplayTools(tools);
 
-        // Create a kernel and register the MCP tools
+        // 建立 Kernel 並註冊 MCP 工具
         Kernel kernel = CreateKernelWithChatCompletionService();
         kernel.Plugins.AddFromFunctions("Tools", tools.Select(aiFunction => aiFunction.AsKernelFunction()));
 
-        // Enable automatic function calling
+        // 啟用自動函式呼叫
         OpenAIPromptExecutionSettings executionSettings = new()
         {
             Temperature = 0,
@@ -53,13 +53,13 @@ internal sealed class AgentAvailableAsMCPToolSample : BaseSample
         string prompt = "I'd like to order the 'Grande Mug' and return the 'Wide Rim Mug' bought last week.";
         Console.WriteLine(prompt);
 
-        // Execute a prompt using the MCP tools. The AI model will automatically call the appropriate MCP tools to answer the prompt.
+        // 使用 MCP 工具執行提示詞。AI 模型會自動呼叫適當的 MCP 工具來回答。
         FunctionResult result = await kernel.InvokePromptAsync(prompt, new(executionSettings));
 
         Console.WriteLine(result);
         Console.WriteLine();
 
-        // The expected output is: The order for the "Grande Mug" has been successfully placed.
+        // 預期輸出：The order for the "Grande Mug" has been successfully placed.
         // Additionally, the return process for the "Wide Rim Mug" has been successfully initiated.
         // If you have any further questions or need assistance with anything else, feel free to ask!
     }

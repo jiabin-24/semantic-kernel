@@ -2,7 +2,7 @@
   "name": "GetCurrentWeatherForCity",
   "description": "Provides current weather information for a specified city.",
   "template_format": "handlebars",
-  "template": "It's {{WeatherUtils-GetWeatherForCity city time}} in {{city}} as of {{time}}",
+  "template": "It's {{WeatherUtils-GetWeatherForCity cityName=city currentDateTimeInUtc=time}} in {{city}} as of {{time}}",
   "input_variables": [
     {
       "name": "city",

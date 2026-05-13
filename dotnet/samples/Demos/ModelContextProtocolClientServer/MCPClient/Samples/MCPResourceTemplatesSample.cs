@@ -12,33 +12,33 @@ using ModelContextProtocol.Protocol;
 namespace MCPClient.Samples;
 
 /// <summary>
-/// Demonstrates how to use the Model Context Protocol (MCP) resource templates with the Semantic Kernel.
+/// 示範如何在 Semantic Kernel 中使用 Model Context Protocol (MCP) 資源範本。
 /// </summary>
 internal sealed class MCPResourceTemplatesSample : BaseSample
 {
     /// <summary>
-    /// Demonstrates how to use the MCP resource templates with the Semantic Kernel.
-    /// The code in this method:
-    /// 1. Creates an MCP client.
-    /// 2. Retrieves the list of resource templates provided by the MCP server.
-    /// 3. Reads relevant to the prompt records from the `vectorStore://records/{prompt}` MCP resource template.
-    /// 4. Adds the records to the chat history and prompts the AI model to explain what SK is.
+    /// 示範如何在 Semantic Kernel 中使用 MCP 資源範本。
+    /// 此方法中的程式碼流程：
+    /// 1. 建立 MCP 用戶端。
+    /// 2. 取得 MCP 伺服器提供的資源範本清單。
+    /// 3. 從 `vectorStore://records/{prompt}` MCP 資源範本讀取與提示詞相關的記錄。
+    /// 4. 將記錄加入聊天歷程，並要求 AI 模型說明 SK 是什麼。
     /// </summary>
     public static async Task RunAsync()
     {
         Console.WriteLine($"Running the {nameof(MCPResourceTemplatesSample)} sample.");
 
-        // Create an MCP client
+        // 建立 MCP 用戶端
         await using IMcpClient mcpClient = await CreateMcpClientAsync();
 
-        // Retrieve list of resource templates provided by the MCP server and display them
+        // 取得並顯示 MCP 伺服器提供的資源範本清單
         IList<McpClientResourceTemplate> resourceTemplates = await mcpClient.ListResourceTemplatesAsync();
         DisplayResourceTemplates(resourceTemplates);
 
-        // Create a kernel
+        // 建立 Kernel
         Kernel kernel = CreateKernelWithChatCompletionService();
 
-        // Enable automatic function calling
+        // 啟用自動函式呼叫
         OpenAIPromptExecutionSettings executionSettings = new()
         {
             Temperature = 0,
@@ -47,15 +47,15 @@ internal sealed class MCPResourceTemplatesSample : BaseSample
 
         string prompt = "What is the Semantic Kernel?";
 
-        // Retrieve relevant to the prompt records via MCP resource template
+        // 透過 MCP 資源範本取得與提示詞相關的記錄
         ReadResourceResult resource = await mcpClient.ReadResourceAsync($"vectorStore://records/{prompt}");
 
-        // Add the resource content/records to the chat history and prompt the AI model to explain what SK is
+        // 將資源內容／記錄加入聊天歷程，並要求 AI 模型說明 SK 是什麼
         ChatHistory chatHistory = [];
         chatHistory.AddUserMessage(resource.ToChatMessageContentItemCollection());
         chatHistory.AddUserMessage(prompt);
 
-        // Execute a prompt using the MCP resource and prompt added to the chat history
+        // 使用加入聊天歷程的 MCP 資源與提示詞執行對話
         IChatCompletionService chatCompletion = kernel.GetRequiredService<IChatCompletionService>();
 
         ChatMessageContent result = await chatCompletion.GetChatMessageContentAsync(chatHistory, executionSettings, kernel);
@@ -63,14 +63,14 @@ internal sealed class MCPResourceTemplatesSample : BaseSample
         Console.WriteLine(result);
         Console.WriteLine();
 
-        // The expected output is: The Semantic Kernel (SK) is a lightweight software development kit (SDK) designed for use in .NET applications.
+        // 預期輸出：The Semantic Kernel (SK) is a lightweight software development kit (SDK) designed for use in .NET applications.
         // It acts as an orchestrator that facilitates interaction between AI models and available plugins, enabling them to work together to produce desired outputs.
     }
 
     /// <summary>
-    /// Displays the list of resource templates provided by the MCP server.
+    /// 顯示 MCP 伺服器提供的資源範本清單。
     /// </summary>
-    /// <param name="resourceTemplates">The list of resource templates to display.</param>
+    /// <param name="resourceTemplates">要顯示的資源範本清單。</param>
     private static void DisplayResourceTemplates(IList<McpClientResourceTemplate> resourceTemplates)
     {
         Console.WriteLine("Available MCP resource templates:");

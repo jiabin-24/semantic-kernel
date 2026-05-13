@@ -11,37 +11,37 @@ using ModelContextProtocol.Client;
 namespace MCPClient.Samples;
 
 /// <summary>
-/// This sample demonstrates how to use the Model Context Protocol (MCP) tools with the Semantic Kernel.
+/// 此範例示範如何在 Semantic Kernel 中使用 Model Context Protocol (MCP) 工具。
 /// </summary>
 internal sealed class MCPToolsSample : BaseSample
 {
     /// <summary>
-    /// Demonstrates how to use the MCP tools with the Semantic Kernel.
-    /// The code in this method:
-    /// 1. Creates an MCP client.
-    /// 2. Retrieves the list of tools provided by the MCP server.
-    /// 3. Creates a kernel and registers the MCP tools as Kernel functions.
-    /// 4. Sends the prompt to AI model together with the MCP tools represented as Kernel functions.
-    /// 5. The AI model calls DateTimeUtils-GetCurrentDateTimeInUtc function to get the current date time in UTC required as an argument for the next function.
-    /// 6. The AI model calls WeatherUtils-GetWeatherForCity function with the current date time and the `Boston` arguments extracted from the prompt to get the weather information.
-    /// 7. Having received the weather information from the function call, the AI model returns the answer to the prompt.
+    /// 示範如何在 Semantic Kernel 中使用 MCP 工具。
+    /// 此方法中的程式碼流程：
+    /// 1. 建立 MCP 用戶端。
+    /// 2. 取得 MCP 伺服器提供的工具清單。
+    /// 3. 建立 Kernel，並將 MCP 工具註冊為 Kernel 函式。
+    /// 4. 將提示詞連同以 Kernel 函式表示的 MCP 工具一併送到 AI 模型。
+    /// 5. AI 模型呼叫 DateTimeUtils-GetCurrentDateTimeInUtc 函式，取得下一個函式所需的 UTC 目前時間。
+    /// 6. AI 模型呼叫 WeatherUtils-GetWeatherForCity 函式，使用目前時間與從提示詞擷取的 `Boston` 參數取得天氣資訊。
+    /// 7. 取得函式呼叫回傳的天氣資訊後，AI 模型回覆提示詞答案。
     /// </summary>
     public static async Task RunAsync()
     {
         Console.WriteLine($"Running the {nameof(MCPToolsSample)} sample.");
 
-        // Create an MCP client
+        // 建立 MCP 用戶端
         await using IMcpClient mcpClient = await CreateMcpClientAsync();
 
-        // Retrieve and display the list provided by the MCP server
+        // 取得並顯示 MCP 伺服器提供的工具清單
         IList<McpClientTool> tools = await mcpClient.ListToolsAsync();
         DisplayTools(tools);
 
-        // Create a kernel and register the MCP tools
+        // 建立 Kernel 並註冊 MCP 工具
         Kernel kernel = CreateKernelWithChatCompletionService();
         kernel.Plugins.AddFromFunctions("Tools", tools.Select(aiFunction => aiFunction.AsKernelFunction()));
 
-        // Enable automatic function calling
+        // 啟用自動函式呼叫
         OpenAIPromptExecutionSettings executionSettings = new()
         {
             Temperature = 0,
@@ -51,12 +51,12 @@ internal sealed class MCPToolsSample : BaseSample
         string prompt = "What is the likely color of the sky in Boston today?";
         Console.WriteLine(prompt);
 
-        // Execute a prompt using the MCP tools. The AI model will automatically call the appropriate MCP tools to answer the prompt.
+        // 使用 MCP 工具執行提示詞。AI 模型會自動呼叫適當的 MCP 工具來回答。
         FunctionResult result = await kernel.InvokePromptAsync(prompt, new(executionSettings));
 
         Console.WriteLine(result);
         Console.WriteLine();
 
-        // The expected output is: The likely color of the sky in Boston today is gray, as it is currently rainy.
+        // 預期輸出：The likely color of the sky in Boston today is gray, as it is currently rainy.
     }
 }
