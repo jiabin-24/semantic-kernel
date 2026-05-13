@@ -14,7 +14,7 @@ internal sealed class Program
     {
         //await MCPToolsSample.RunAsync();
 
-        await MCPPromptSample.RunAsync();
+        //await MCPPromptSample.RunAsync();
 
         //await MCPResourcesSample.RunAsync();
 
@@ -26,6 +26,6 @@ internal sealed class Program
 
         //await AzureAIAgentWithMCPToolsSample.RunAsync();
 
-        //await AgentAvailableAsMCPToolSample.RunAsync();
+        await AgentAvailableAsMCPToolSample.RunAsync();
     }
 }

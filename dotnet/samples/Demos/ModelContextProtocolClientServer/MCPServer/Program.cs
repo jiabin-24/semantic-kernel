@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
+using Azure.Identity;
 using MCPServer;
 using MCPServer.ProjectResources;
 using MCPServer.Prompts;
@@ -32,7 +33,7 @@ kernelBuilder.Plugins.AddFromFunctions("Agents", [AgentKernelFunctionFactory.Cre
 // Register embedding generation service and in-memory vector store
 kernelBuilder.Services.AddSingleton<VectorStore, InMemoryVectorStore>();
 // kernelBuilder.Services.AddOpenAIEmbeddingGenerator(embeddingModelId, apiKey);
-kernelBuilder.Services.AddAzureOpenAIEmbeddingGenerator(embeddingModelId, endpoint, apiKey);
+kernelBuilder.Services.AddAzureOpenAIEmbeddingGenerator(embeddingModelId, endpoint, new DefaultAzureCredential());
 
 // Register MCP server
 builder.Services
